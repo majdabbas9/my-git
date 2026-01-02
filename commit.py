@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timezone
 from blob import write_object
 from tree import my_get_write_tree
+from help import change_head,find_parent_commit,extract_tree_oid_from_commit_head
 def format_author(name: str, email: str, timestamp: int | None = None) -> str:
     if timestamp is None:
         timestamp = int(time.time())
@@ -40,5 +41,13 @@ def write_commit(tree_oid,message,parent_oid = None,author_name = "You",author_e
     payload = "\n".join(lines).encode("utf-8")
 
     return write_object("commit", payload)
-def my_get_commit(tree_oid,message,parent_oid = None,author_name = "You",author_email = "you@example.com",curr_branch = "main"):
-    # TODO
+def my_get_commit(message,to_ignore,author_name = "You",author_email = "you@example.com",curr_branch = "main"):
+    parent_oid = find_parent_commit(curr_branch)
+    curr_tree_oid = extract_tree_oid_from_commit_head(curr_branch)
+    tree_oid = my_get_write_tree("", to_ignore)
+    if tree_oid == curr_tree_oid:
+        return "nothing to commit"
+    else :
+        oid = write_commit(tree_oid,message,parent_oid,author_name,author_email)
+        change_head(oid,curr_branch)
+        return "Commit created."

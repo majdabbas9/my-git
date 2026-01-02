@@ -4,6 +4,7 @@ import os
 import argparse
 from blob import my_get_hash_object, my_get_cat_file
 from tree import my_get_write_tree, my_get_ls_tree
+from commit import my_get_commit
 from help import find_repo_root
 
 def cmd_init(args):
@@ -49,8 +50,18 @@ def cmd_ls_tree(args):
         # If find_repo_root fails (no .mygit), maybe handle or just let it crash/print error
         pass
         
-    print(my_get_ls_tree(path, to_ignore, args.name_only))
+    print(my_get_ls_tree(path, to_ignore, args.name_only, args.oid))
 
+def cmd_commit(args):
+    to_ignore = []
+    if os.path.exists("ignore.txt"):
+        with open("ignore.txt", "r") as f:
+            to_ignore = f.read().splitlines()
+    
+    # my_get_commit returns nothing currently, maybe change that? 
+    # commit.py line 48: change_head(oid,curr_branch). It doesn't return oid.
+    # But it calculates it.
+    print(my_get_commit(args.message, to_ignore, author_name=args.author, author_email=args.email))
 def main():
     parser = argparse.ArgumentParser(description="MyGit - A simple git implementation")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -79,8 +90,16 @@ def main():
     # ls-tree
     sp_ls_tree = subparsers.add_parser("ls-tree", help="List the contents of a tree object")
     sp_ls_tree.add_argument("--name-only", action="store_true", help="List only filenames")
+    sp_ls_tree.add_argument("--oid", help="The tree OID to list")
     sp_ls_tree.add_argument("path", nargs="?", default="", help="Tree object to list")
     sp_ls_tree.set_defaults(func=cmd_ls_tree)
+
+    # commit
+    sp_commit = subparsers.add_parser("commit", help="Record changes to the repository")
+    sp_commit.add_argument("-m", "--message", required=True, help="Commit message")
+    sp_commit.add_argument("--author", default="You", help="Author name")
+    sp_commit.add_argument("--email", default="you@example.com", help="Author email")
+    sp_commit.set_defaults(func=cmd_commit)
 
     args = parser.parse_args()
     args.func(args)

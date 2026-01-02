@@ -44,9 +44,14 @@ def my_get_write_tree(path = "",to_ignore = None):
     return write_tree(dir_path,to_ignore)
 
 
-def my_get_ls_tree(path = "",to_ignore = None,names_only = False):
-    dir_path = os.path.join(find_repo_root(path),path)
-    out = parse_tree(write_tree(dir_path,to_ignore))
+def my_get_ls_tree(path = "",to_ignore = None,names_only = False, oid=None):
+    if oid:
+        tree_sha = oid
+    else:
+        dir_path = os.path.join(find_repo_root(path),path)
+        tree_sha = write_tree(dir_path,to_ignore)
+        
+    out = parse_tree(tree_sha)
     res = []
     for o in out:
         res.append(o[1] if names_only else " ".join(o))
