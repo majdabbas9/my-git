@@ -1,0 +1,10 @@
+.mygit
+__pycache__
+ignore.txt
+tree.py
+blob.py
+main.py
+test.py
+help.py
+commit.py
+.git
