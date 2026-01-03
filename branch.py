@@ -1,8 +1,9 @@
+from main import cmd_hash_object
 import sys
 import os
 import zlib
 import hashlib
-from help import find_repo_root,get_to_ignore,get_curr_branch,find_parent_commit
+from help import find_repo_root,get_to_ignore,get_curr_branch,find_parent_commit,change_ref
 from blob import my_get_cat_file
 from tree import parse_tree
 
@@ -94,8 +95,8 @@ def change_the_content_of_current_dict(commit_id, to_ignore=None):
 
 def my_git_check_out(commit_id_or_branch_name):
     if len(commit_id_or_branch_name) == 40 and os.path.exists(os.path.join(repo_root,".mygit","objects",commit_id_or_branch_name[:2],commit_id_or_branch_name[2:])):
-        commit_id = commit_id_or_branch_name
-        
+        change_ref(commit_id_or_branch_name)
+        change_the_content_of_current_dict(commit_id_or_branch_name)
     elif os.path.exists(os.path.join(repo_root,".mygit","refs","heads",commit_id_or_branch_name)):
         with open(os.path.join(repo_root,".mygit","refs","heads",commit_id_or_branch_name),"rb") as f:
             commit_id = f.read()
