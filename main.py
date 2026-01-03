@@ -5,7 +5,7 @@ import argparse
 from blob import my_get_hash_object, my_get_cat_file
 from tree import my_get_write_tree, my_get_ls_tree
 from commit import my_get_commit
-from help import find_repo_root
+from help import find_repo_root,get_to_ignore
 
 def cmd_init(args):
     os.makedirs(".mygit/objects", exist_ok=True)
@@ -26,11 +26,7 @@ def cmd_cat_file(args):
         print(content)
 
 def cmd_write_tree(args):
-    to_ignore = []
-    if os.path.exists("ignore.txt"):
-        with open("ignore.txt", "r") as f:
-            to_ignore = f.read().splitlines()
-    
+    to_ignore = get_to_ignore()
     path = args.path if args.path else ""
     print(my_get_write_tree(path, to_ignore))
 

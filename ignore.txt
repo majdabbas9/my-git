@@ -8,3 +8,5 @@ test.py
 help.py
 commit.py
 .git
+.gitignore
+README.md
