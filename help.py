@@ -37,7 +37,7 @@ def change_ref(commit_oid,curr_branch = "main"):
     with open(full_path_to_head,"w") as f:
         f.write(commit_oid)
 
-def find_parent_commit(curr_branch = "main"):
+def find_curr_branch_commit(curr_branch = "main"):
     repo_path = find_repo_root()
     full_path_to_head = os.path.join(repo_path,".mygit","refs","heads",curr_branch)
     if not os.path.exists(full_path_to_head):
@@ -47,7 +47,7 @@ def find_parent_commit(curr_branch = "main"):
         return data if data else None
 
 def extract_tree_oid_from_commit_head(curr_branch = "main"):
-    parent_oid = find_parent_commit(curr_branch)
+    parent_oid = find_curr_branch_commit(curr_branch)
     data = my_get_cat_file(parent_oid)
     np = data.find(b" ")
     return data[np+1:np+41].decode("ascii")
@@ -113,3 +113,14 @@ def get_curr_branch():
         # Git refs always use forward slashes internally
         return content.split("/")[-1]
     return None
+
+    with open(path,"w") as f:
+        curr_brach = f.read().split("")
+
+# print(get_all_commits())
+
+def change_head(new_ref):
+    repo_path = find_repo_root()
+    path = os.path.join(repo_path, ".mygit", "HEAD")
+    with open(path, "w") as f:
+        f.write(new_ref + "\n") 

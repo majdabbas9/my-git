@@ -6,6 +6,7 @@ from blob import my_get_hash_object, my_get_cat_file
 from tree import my_get_write_tree, my_get_ls_tree
 from commit import my_get_commit
 from help import find_repo_root,get_to_ignore
+from branch import my_git_branch, my_git_check_out
 
 def cmd_init(args):
     os.makedirs(".mygit/objects", exist_ok=True)
@@ -58,6 +59,14 @@ def cmd_commit(args):
     # commit.py line 48: change_head(oid,curr_branch). It doesn't return oid.
     # But it calculates it.
     print(my_get_commit(args.message, to_ignore, author_name=args.author, author_email=args.email))
+
+def cmd_branch(args):
+    print(my_git_branch(args.name))
+
+def cmd_checkout(args):
+    result = my_git_check_out(args.name, create_branch=args.b)
+    if result:
+        print(result)
 def main():
     parser = argparse.ArgumentParser(description="MyGit - A simple git implementation")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -96,6 +105,17 @@ def main():
     sp_commit.add_argument("--author", default="You", help="Author name")
     sp_commit.add_argument("--email", default="you@example.com", help="Author email")
     sp_commit.set_defaults(func=cmd_commit)
+
+    # branch
+    sp_branch = subparsers.add_parser("branch", help="List, create, or delete branches")
+    sp_branch.add_argument("name", help="The name of the branch to create")
+    sp_branch.set_defaults(func=cmd_branch)
+
+    # checkout
+    sp_checkout = subparsers.add_parser("checkout", help="Switch branches or restore working tree files")
+    sp_checkout.add_argument("name", help="The name of the branch or commit to checkout")
+    sp_checkout.add_argument("-b", action="store_true", help="Create a new branch and switch to it")
+    sp_checkout.set_defaults(func=cmd_checkout)
 
     args = parser.parse_args()
     args.func(args)

@@ -1,9 +1,9 @@
-from main import cmd_hash_object
+# Removed circular import
 import sys
 import os
 import zlib
 import hashlib
-from help import find_repo_root,get_to_ignore,get_curr_branch,find_parent_commit,change_ref
+from help import find_repo_root,get_to_ignore,get_curr_branch,find_curr_branch_commit,change_ref,change_head
 from blob import my_get_cat_file
 from tree import parse_tree
 
@@ -23,9 +23,7 @@ def my_git_branch(branch_name):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             f.write(commit_hash + "\n")
-        with open(ref_commit_id_of_head, "w") as f:
-            f.write(f"ref: refs/heads/{branch_name}\n")
-        return f"Created branch '{branch_name}' and switched to it"
+        return f"Created branch '{branch_name}'"
 
 def delete_workdir_from_tree(tree_sha, current_dir, to_ignore):
     entries = parse_tree(tree_sha)
@@ -65,7 +63,7 @@ def change_the_content_of_current_dict(commit_id, to_ignore=None):
         to_ignore = get_to_ignore() 
     # 1. Delete contents of the previous commit tree
     curr_branch = get_curr_branch()
-    prev_commit_id = find_parent_commit(curr_branch)
+    prev_commit_id = find_curr_branch_commit(curr_branch)
     if prev_commit_id:
         try:
             prev_commit_content = my_get_cat_file(prev_commit_id).decode("utf-8")
@@ -93,10 +91,17 @@ def change_the_content_of_current_dict(commit_id, to_ignore=None):
     else:
         raise ValueError(f"Could not find tree in commit {commit_id}")
 
-def my_git_check_out(commit_id_or_branch_name):
+def my_git_check_out(commit_id_or_branch_name,create_branch = False):
     if len(commit_id_or_branch_name) == 40 and os.path.exists(os.path.join(repo_root,".mygit","objects",commit_id_or_branch_name[:2],commit_id_or_branch_name[2:])):
-        change_ref(commit_id_or_branch_name)
         change_the_content_of_current_dict(commit_id_or_branch_name)
-    elif os.path.exists(os.path.join(repo_root,".mygit","refs","heads",commit_id_or_branch_name)):
-        with open(os.path.join(repo_root,".mygit","refs","heads",commit_id_or_branch_name),"rb") as f:
-            commit_id = f.read()
+        change_ref(commit_id_or_branch_name)
+    else :
+        ref_path = os.path.join(repo_root,".mygit","refs","heads",commit_id_or_branch_name) 
+        branch_exists = os.path.exists(ref_path)
+        if create_branch and not branch_exists:
+            print(my_git_branch(commit_id_or_branch_name)) 
+        if branch_exists or create_branch:
+            change_head(f"ref: refs/heads/{commit_id_or_branch_name}\n")
+            return f"switched to branch {commit_id_or_branch_name}" if create_branch 
+        else:
+            return "this branch dont exist"
