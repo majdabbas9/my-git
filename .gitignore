@@ -4,3 +4,7 @@ __pycache__/
 .mygit/
 test.py
 test2.txt
+.venv
+new_file.txt
+test3.txt
+commit_graph.png

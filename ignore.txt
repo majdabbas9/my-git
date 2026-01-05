@@ -11,3 +11,4 @@ branch.py
 .git
 .gitignore
 README.md
+git_object.py

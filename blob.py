@@ -1,29 +1,52 @@
-import sys
 import os
-import zlib
-import hashlib
-def write_object(object_name,data,write = True):
-    to_store = (object_name + " " + str(len(data)) + "\0").encode("ascii") + data
-    sha1 = hashlib.sha1(to_store).hexdigest()
-    if write:
-        path = os.path.join(".mygit","objects",sha1[:2],sha1[2:])
-        if not os.path.exists(path):
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "wb") as f:
-                f.write(zlib.compress(to_store))
-    return sha1
+from git_object import GitObject
 
-def my_get_hash_object(file_path,write = True):
-    with open(file_path ,"rb") as f:
-        data = f.read()
-    return write_object("blob",data)
 
-def my_get_cat_file(sha):
-    path = os.path.join(".mygit","objects",sha[:2],sha[2:])
-    if not os.path.exists(path):
-        print("no file like that")
+def hash_file_to_blob(file_path, write=True):
+    """
+    Hash a file and optionally store it as a blob object.
+    
+    Args:
+        file_path: Path to the file to hash
+        write: Whether to write the blob to .mygit/objects (default: True)
+        
+    Returns:
+        SHA-1 hash of the blob object
+    """
+    with open(file_path, "rb") as f:
+        file_content = f.read()
+    
+    return GitObject.write_object("blob", file_content, write)
+
+
+def read_git_object(object_hash):
+    """
+    Read a Git object by its hash.
+    
+    Args:
+        object_hash: SHA-1 hash of the object
+        
+    Returns:
+        Object content as bytes
+    """
+    try:
+        return GitObject.read_object(object_hash)
+    except FileNotFoundError:
+        print(f"Error: Object {object_hash} not found")
         exit(1)
-    with open(path,"rb") as f:
-        data = zlib.decompress(f.read())
-        data_start = data.find(b"\x00")
-        return data[data_start+1:]
+
+
+# Legacy function names for backward compatibility (to be removed after refactoring)
+def write_object(object_type, data, write=True):
+    """Legacy function - use GitObject.write_object() instead."""
+    return GitObject.write_object(object_type, data, write)
+
+
+def my_get_hash_object(file_path, write=True):
+    """Legacy function - use hash_file_to_blob() instead."""
+    return hash_file_to_blob(file_path, write)
+
+
+def my_get_cat_file(object_hash):
+    """Legacy function - use read_git_object() instead."""
+    return read_git_object(object_hash)

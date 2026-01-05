@@ -1,58 +1,142 @@
-import sys
 import os
-import zlib
-import hashlib
-from blob import my_get_hash_object,my_get_cat_file,write_object
+from git_object import GitObject
+from blob import hash_file_to_blob, read_git_object
 from help import find_repo_root
-def write_tree(dir_path,to_ignore):
-    with os.scandir(dir_path) as entries:
-        all_raw_data = []
-        # Each entry: (file/dict name, data)
+
+
+def create_tree_object(directory_path, ignore_patterns):
+    """
+    Create a tree object from a directory.
+    
+    Args:
+        directory_path: Path to the directory
+        ignore_patterns: List of file/directory names to ignore
+        
+    Returns:
+        SHA-1 hash of the tree object
+    """
+    with os.scandir(directory_path) as entries:
+        tree_entries = []
+        
         for child in entries:
-            if child.name in to_ignore:
+            if child.name in ignore_patterns:
                 continue
+            
             if child.is_file():
                 mode = b"100644"
-                oid = my_get_hash_object(child)
+                object_id = hash_file_to_blob(child)
             elif child.is_dir():
                 mode = b"40000"
-                oid = write_tree(os.path.join(dir_path,child),to_ignore)
-            raw_data = mode + b" " + child.name.encode("utf-8")  + b"\0" + bytes.fromhex(oid)
-            all_raw_data.append([child.name,raw_data])
-        all_raw_data.sort(key= lambda t : t[0])
-        data = b"".join(e[1] for e in all_raw_data)
-        return write_object("tree",data)
-
-
-def parse_tree(sha):
-    out = []
-    data = my_get_cat_file(sha)
-    i = 0
-    while i < len(data):
-        sp = data.find(b" ",i)
-        nl = data.find(b"\0",sp+1)
-        mode = data[i:sp].decode("ascii")
-        name = data[sp+1:nl].decode("ascii")
-        sha = data[nl+1:nl+21].hex()
-        out.append([mode,name,sha])
-        i = nl + 21
-    return out
-
-
-def my_get_write_tree(path = "",to_ignore = None):
-    dir_path = os.path.join(find_repo_root(path),path)
-    return write_tree(dir_path,to_ignore)
-
-
-def my_get_ls_tree(path = "",to_ignore = None,names_only = False, oid=None):
-    if oid:
-        tree_sha = oid
-    else:
-        dir_path = os.path.join(find_repo_root(path),path)
-        tree_sha = write_tree(dir_path,to_ignore)
+                object_id = create_tree_object(
+                    os.path.join(directory_path, child), 
+                    ignore_patterns
+                )
+            
+            # Format: mode + space + name + null byte + hash bytes
+            entry_data = mode + b" " + child.name.encode("utf-8") + b"\x00" + bytes.fromhex(object_id)
+            tree_entries.append([child.name, entry_data])
         
-    out = parse_tree(tree_sha)
-    res = []
-    for o in out:
-        res.append(o[1] if names_only else " ".join(o))
-    return "\n".join(res)
+        # Sort entries by name
+        tree_entries.sort(key=lambda entry: entry[0])
+        
+        # Concatenate all entry data
+        tree_data = b"".join(entry[1] for entry in tree_entries)
+        
+        return GitObject.write_object("tree", tree_data)
+
+
+def parse_tree_object(tree_hash):
+    """
+    Parse a tree object and return its entries.
+    
+    Args:
+        tree_hash: SHA-1 hash of the tree object
+        
+    Returns:
+        List of [mode, name, hash] for each entry
+    """
+    entries = []
+    tree_data = read_git_object(tree_hash)
+    
+    index = 0
+    while index < len(tree_data):
+        # Find space after mode
+        space_index = tree_data.find(b" ", index)
+        # Find null byte after name
+        null_index = tree_data.find(b"\x00", space_index + 1)
+        
+        mode = tree_data[index:space_index].decode("ascii")
+        name = tree_data[space_index + 1:null_index].decode("ascii")
+        object_hash = tree_data[null_index + 1:null_index + 21].hex()
+        
+        entries.append([mode, name, object_hash])
+        index = null_index + 21
+    
+    return entries
+
+
+def write_tree_from_directory(path="", ignore_patterns=None):
+    """
+    Create a tree object from a directory in the repository.
+    
+    Args:
+        path: Relative path from repository root (default: "")
+        ignore_patterns: List of patterns to ignore (default: None)
+        
+    Returns:
+        SHA-1 hash of the tree object
+    """
+    directory_path = os.path.join(find_repo_root(path), path)
+    return create_tree_object(directory_path, ignore_patterns)
+
+
+def list_tree_contents(path="", ignore_patterns=None, names_only=False, object_id=None):
+    """
+    List the contents of a tree object.
+    
+    Args:
+        path: Relative path from repository root (default: "")
+        ignore_patterns: List of patterns to ignore (default: None)
+        names_only: If True, only return names, not full info (default: False)
+        object_id: Specific tree hash to list (default: None, will compute from path)
+        
+    Returns:
+        String with tree contents, one entry per line
+    """
+    if object_id:
+        tree_hash = object_id
+    else:
+        directory_path = os.path.join(find_repo_root(path), path)
+        tree_hash = create_tree_object(directory_path, ignore_patterns)
+    
+    entries = parse_tree_object(tree_hash)
+    
+    result = []
+    for entry in entries:
+        if names_only:
+            result.append(entry[1])  # Just the name
+        else:
+            result.append(" ".join(entry))  # mode name hash
+    
+    return "\n".join(result)
+
+
+# Legacy function names for backward compatibility
+def write_tree(directory_path, ignore_patterns):
+    """Legacy function - use create_tree_object() instead."""
+    return create_tree_object(directory_path, ignore_patterns)
+
+
+def parse_tree(tree_hash):
+    """Legacy function - use parse_tree_object() instead."""
+    return parse_tree_object(tree_hash)
+
+
+def my_get_write_tree(path="", ignore_patterns=None):
+    """Legacy function - use write_tree_from_directory() instead."""
+    return write_tree_from_directory(path, ignore_patterns)
+
+
+def my_get_ls_tree(path="", ignore_patterns=None, names_only=False, object_id=None):
+    """Legacy function - use list_tree_contents() instead."""
+    return list_tree_contents(path, ignore_patterns, names_only, object_id)
