@@ -42,7 +42,7 @@ def create_branch(branch_name):
     # Create the new branch
     os.makedirs(os.path.dirname(branch_path), exist_ok=True)
     with open(branch_path, "w") as f:
-        f.write(commit_hash + "\n")
+        f.write(commit_hash)
     
     return f"Created branch '{branch_name}'"
 
@@ -107,7 +107,7 @@ def restore_working_directory_files(tree_id, current_directory, ignore_patterns)
             restore_working_directory_files(object_hash, file_path, ignore_patterns)
 
 
-def switch_to_commit(commit_id, ignore_patterns=None):
+def switch_to_commit(commit_id,prev_branch,ignore_patterns=None):
     """
     Switch the working directory to match a specific commit.
     
@@ -121,8 +121,7 @@ def switch_to_commit(commit_id, ignore_patterns=None):
         ignore_patterns = get_ignore_patterns()
     
     # Delete contents of the previous commit tree
-    current_branch = get_current_branch()
-    previous_commit_id = get_branch_commit_id(current_branch)
+    previous_commit_id = get_branch_commit_id(prev_branch)
     
     if previous_commit_id:
         try:
@@ -155,13 +154,13 @@ def switch_to_commit(commit_id, ignore_patterns=None):
         raise ValueError(f"Could not find tree in commit {commit_id}")
 
 
-def checkout(target_ref, create_branch=False):
+def checkout(target_ref, create_branch_flag=False):
     """
     Switch to a branch or commit.
     
     Args:
         target_ref: Branch name or commit hash to checkout
-        create_branch: If True, create the branch if it doesn't exist
+        create_branch_flag: If True, create the branch if it doesn't exist
         
     Returns:
         Success or error message string, or None if successful
@@ -183,12 +182,16 @@ def checkout(target_ref, create_branch=False):
         branch_ref_path = os.path.join(repo_root, ".mygit", "refs", "heads", target_ref)
         branch_exists = os.path.exists(branch_ref_path)
         
-        if create_branch and not branch_exists:
+        if create_branch_flag and not branch_exists:
             print(create_branch(target_ref))
         
-        if branch_exists or create_branch:
+        if branch_exists or create_branch_flag:
+            prev_branch = get_current_branch()
             update_head_reference(f"ref: refs/heads/{target_ref}\n")
-            return f"switched to branch {target_ref}" if create_branch else None
+            if branch_exists:
+                with open(branch_ref_path,"r") as f:
+                    switch_to_commit(f.read(),prev_branch)
+            return f"switched to branch {target_ref}" if create_branch_flag else None
         else:
             return "this branch dont exist"
 
@@ -217,3 +220,4 @@ def change_the_content_of_current_dict(commit_id, ignore_patterns=None):
 def my_git_check_out(target_ref, create_branch=False):
     """Legacy function - use checkout() instead."""
     return checkout(target_ref, create_branch)
+

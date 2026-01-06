@@ -12,3 +12,6 @@ branch.py
 .gitignore
 README.md
 git_object.py
+visualize.py
+.venv
+commit_graph_images

@@ -316,3 +316,4 @@ def format_commit_log(start_node=None):
             continue
     
     return "\n".join(log_lines)
+

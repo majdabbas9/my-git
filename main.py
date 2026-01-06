@@ -13,6 +13,11 @@ def cmd_init(args):
     """Initialize a new MyGit repository."""
     os.makedirs(".mygit/objects", exist_ok=True)
     os.makedirs(".mygit/refs/heads", exist_ok=True)
+    
+    # Create the initial (empty) main branch file
+    with open(".mygit/refs/heads/main", "w") as f:
+        pass
+        
     with open(".mygit/HEAD", "w") as f:
         f.write("ref: refs/heads/main\n")
     print("Initialized mygit directory")
@@ -81,7 +86,7 @@ def cmd_branch(args):
 
 def cmd_checkout(args):
     """Switch branches or restore working tree files."""
-    result = checkout(args.name, create_branch=args.b)
+    result = checkout(args.name, create_branch_flag=args.b)
     if result:
         print(result)
 

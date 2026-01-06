@@ -26,12 +26,12 @@ def get_all_branches():
     return branches
 
 
-def build_commit_graph():
+def build_commit_graph(all_commits_ids):
     """Build a graph structure of commits with their parents."""
     commits = {}
-    all_commit_ids = get_all_commits()
     
-    for commit_id in all_commit_ids:
+    
+    for commit_id in all_commits_ids:
         try:
             raw_content = read_git_object(commit_id)
             content = raw_content.decode("utf-8")
@@ -56,13 +56,12 @@ def build_commit_graph():
             }
         except Exception:
             continue
-    
     return commits
 
 
-def generate_commit_graph_image(output_file="commit_graph.png"):
+def generate_commit_graph_image(output_file=os.path.join("commit_graph_images", "commit_graph.png")):
     """
-    Generate a graphical image of the commit tree.
+    Generate a graphical image of the commit tree in horizontal layout.
     
     Args:
         output_file: Path to save the image file
@@ -70,8 +69,16 @@ def generate_commit_graph_image(output_file="commit_graph.png"):
     # Get data
     current_branch = get_current_branch()
     branches = get_all_branches()
-    commits = build_commit_graph()
-    all_commit_ids = get_all_commits()
+    all_commits_ids = []
+    for b in branches:
+        all_commits_ids.extend(get_all_commits(b))
+    all_commits_ids = list(set(all_commits_ids))
+    
+    # Sort commits by date (oldest first for left-to-right)
+    # Since get_all_commits returns newest first, reverse it
+    display_commits = all_commits_ids[::-1] 
+    
+    commits = build_commit_graph(all_commits_ids) 
     
     if not commits:
         print("No commits found.")
@@ -85,117 +92,97 @@ def generate_commit_graph_image(output_file="commit_graph.png"):
         commit_to_branches[commit_id].append(branch_name)
     
     # Create figure
-    fig, ax = plt.subplots(figsize=(12, max(8, len(all_commit_ids) * 1.5)))
-    ax.set_xlim(-1, 10)
-    ax.set_ylim(-len(all_commit_ids) - 1, 1)
+    fig, ax = plt.subplots(figsize=(max(10, len(display_commits) * 3), 6))
+    ax.set_xlim(-1, len(display_commits) * 3 + 2)
+    ax.set_ylim(-3, 3)
     ax.axis('off')
     
     # Title
-    fig.suptitle('Commit Graph', fontsize=20, fontweight='bold', y=0.98)
+    fig.suptitle('Commit Graph (Oldest → Newest)', fontsize=20, fontweight='bold', y=0.95)
     
-    # Draw commits from top to bottom
-    y_position = 0
+    # Draw commits from left to right
+    x_position = 0
     commit_positions = {}
     
-    for i, commit_id in enumerate(all_commit_ids):
+    for commit_id in display_commits:
         commit_data = commits.get(commit_id, {})
         short_hash = commit_id[:10]
         message = commit_data.get("message", "")
         
         # Store position
-        commit_positions[commit_id] = (3, y_position)
+        commit_positions[commit_id] = (x_position, 0)
         
-        # Determine color based on position
-        if i == 0:
-            node_color = '#4CAF50'  # Green for latest
-        else:
-            node_color = '#FFC107'  # Amber for others
+        # Latest commit in main (or generally newest)
+        is_newest = (commit_id == all_commits_ids[0])
+        node_color = '#4CAF50' if is_newest else '#FFC107'
         
         # Draw commit node (circle)
-        circle = plt.Circle((3, y_position), 0.3, color=node_color, ec='black', linewidth=2, zorder=3)
+        circle = plt.Circle((x_position, 0), 0.3, color=node_color, ec='black', linewidth=2, zorder=3)
         ax.add_patch(circle)
         
-        # Draw commit hash
-        ax.text(3.7, y_position, short_hash, fontsize=11, fontweight='bold', 
-                va='center', fontfamily='monospace')
+        # Draw commit hash (below node)
+        ax.text(x_position, -0.6, short_hash, fontsize=11, fontweight='bold', 
+                ha='center', va='top', fontfamily='monospace')
         
-        # Draw commit message
+        # Draw commit message (further below)
         if message:
-            wrapped_message = message[:40] + "..." if len(message) > 40 else message
-            ax.text(3.7, y_position - 0.25, wrapped_message, fontsize=9, 
-                    va='top', style='italic', color='#555')
+            wrapped_message = message[:25] + "..." if len(message) > 25 else message
+            ax.text(x_position, -0.9, wrapped_message, fontsize=9, 
+                    ha='center', va='top', style='italic', color='#555')
         
-        # Draw branch labels
+        # Draw branch labels (above node)
         if commit_id in commit_to_branches:
-            x_offset = 6.5
+            y_offset = 0.6
             for branch_name in commit_to_branches[commit_id]:
                 if branch_name == current_branch:
-                    # Current branch with HEAD
-                    # Draw HEAD label
-                    head_box = FancyBboxPatch((x_offset - 0.1, y_position - 0.2), 
-                                             0.8, 0.4,
+                    # HEAD and branch label
+                    head_box = FancyBboxPatch((x_position - 0.5, y_offset), 1.0, 0.4,
                                              boxstyle="round,pad=0.05",
-                                             facecolor='#00BCD4', 
-                                             edgecolor='black',
-                                             linewidth=1.5,
-                                             zorder=2)
+                                             facecolor='#00BCD4', edgecolor='black', linewidth=1.5, zorder=2)
                     ax.add_patch(head_box)
-                    ax.text(x_offset + 0.3, y_position, 'HEAD', fontsize=9, 
+                    ax.text(x_position, y_offset + 0.2, 'HEAD', fontsize=9, 
                            fontweight='bold', va='center', ha='center', color='white')
                     
-                    x_offset += 1.2
+                    y_offset += 0.5
+                    ax.annotate('', xy=(x_position, y_offset), xytext=(x_position, y_offset - 0.1),
+                               arrowprops=dict(arrowstyle='<-', lw=1.5, color='black'))
+                    y_offset += 0.1
                     
-                    # Draw arrow
-                    ax.annotate('', xy=(x_offset + 0.3, y_position), 
-                               xytext=(x_offset, y_position),
-                               arrowprops=dict(arrowstyle='->', lw=1.5, color='black'))
-                    
-                    x_offset += 0.3
-                    
-                    # Draw branch label
-                    branch_box = FancyBboxPatch((x_offset - 0.1, y_position - 0.2), 
-                                               len(branch_name) * 0.12 + 0.3, 0.4,
+                    branch_box = FancyBboxPatch((x_position - (len(branch_name)*0.06 + 0.2), y_offset), 
+                                               len(branch_name)*0.12 + 0.4, 0.4,
                                                boxstyle="round,pad=0.05",
-                                               facecolor='#2196F3',
-                                               edgecolor='black',
-                                               linewidth=1.5,
-                                               zorder=2)
+                                               facecolor='#2196F3', edgecolor='black', linewidth=1.5, zorder=2)
                     ax.add_patch(branch_box)
-                    ax.text(x_offset + len(branch_name) * 0.06 + 0.05, y_position, 
-                           branch_name, fontsize=9, fontweight='bold', 
+                    ax.text(x_position, y_offset + 0.2, branch_name, fontsize=9, fontweight='bold', 
                            va='center', ha='center', color='white')
-                    x_offset += len(branch_name) * 0.12 + 0.5
+                    y_offset += 0.6
                 else:
-                    # Other branches
-                    branch_box = FancyBboxPatch((x_offset - 0.1, y_position - 0.2), 
-                                               len(branch_name) * 0.12 + 0.3, 0.4,
+                    # Regular branch label
+                    branch_box = FancyBboxPatch((x_position - (len(branch_name)*0.06 + 0.2), y_offset), 
+                                               len(branch_name)*0.12 + 0.4, 0.4,
                                                boxstyle="round,pad=0.05",
-                                               facecolor='#9C27B0',
-                                               edgecolor='black',
-                                               linewidth=1.5,
-                                               zorder=2)
+                                               facecolor='#9C27B0', edgecolor='black', linewidth=1.5, zorder=2)
                     ax.add_patch(branch_box)
-                    ax.text(x_offset + len(branch_name) * 0.06 + 0.05, y_position, 
-                           branch_name, fontsize=9, fontweight='bold', 
+                    ax.text(x_position, y_offset + 0.2, branch_name, fontsize=9, fontweight='bold', 
                            va='center', ha='center', color='white')
-                    x_offset += len(branch_name) * 0.12 + 0.5
+                    y_offset += 0.6
         
-        y_position -= 1.5
+        x_position += 2.5
     
-    # Draw parent connections
-    for commit_id in all_commit_ids:
+    # Draw parent connections (reversed direction: child → parent)
+    for commit_id in all_commits_ids:
         commit_data = commits.get(commit_id, {})
         parents = commit_data.get("parents", [])
         
         if commit_id in commit_positions:
-            x1, y1 = commit_positions[commit_id]
+            x_child, y_child = commit_positions[commit_id]
             
             for parent_id in parents:
                 if parent_id in commit_positions:
-                    x2, y2 = commit_positions[parent_id]
+                    x_parent, y_parent = commit_positions[parent_id]
                     
-                    # Draw arrow from child to parent
-                    arrow = FancyArrowPatch((x1, y1 - 0.3), (x2, y2 + 0.3),
+                    # Draw arrow from child (right) to parent (left)
+                    arrow = FancyArrowPatch((x_child - 0.35, y_child), (x_parent + 0.35, y_parent),
                                           arrowstyle='->', 
                                           color='#2196F3',
                                           linewidth=2,
@@ -211,12 +198,13 @@ def generate_commit_graph_image(output_file="commit_graph.png"):
         mpatches.Patch(facecolor='#2196F3', edgecolor='black', label='Current Branch'),
         mpatches.Patch(facecolor='#9C27B0', edgecolor='black', label='Other Branches'),
     ]
-    ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
+    ax.legend(handles=legend_elements, loc='lower center', ncol=3, fontsize=9, bbox_to_anchor=(0.5, 0.05))
     
     # Save figure
     plt.tight_layout()
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file, dpi=150, bbox_inches='tight', facecolor='white')
-    print(f"Commit graph saved to: {output_file}")
+    print(f"Horizontal commit graph saved to: {output_file}")
     
     return output_file
 
