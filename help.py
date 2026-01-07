@@ -151,7 +151,7 @@ def get_all_commits(start_node=None):
     
     while queue:
         commit_hash = queue.pop(0)
-        if not commit_hash or commit_hash in visited:
+        if not commit_hash or commit_hash in visited or commit_hash == 'None':
             continue
         visited.add(commit_hash)
         
@@ -316,4 +316,3 @@ def format_commit_log(start_node=None):
             continue
     
     return "\n".join(log_lines)
-

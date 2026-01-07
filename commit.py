@@ -31,7 +31,7 @@ def format_author(name, email, timestamp=None):
     return f"{name} <{email}> {timestamp} {timezone_offset}"
 
 
-def create_commit_object(tree_object_id, message, parent_commit_id=None, 
+def create_commit_object(tree_object_id, message, parent_commit_ids=None, 
                         author_name="You", author_email="you@example.com"):
     """
     Create a commit object.
@@ -52,8 +52,9 @@ def create_commit_object(tree_object_id, message, parent_commit_id=None,
     lines.append(f"tree {tree_object_id}")
     
     # Add parent reference if this is not the initial commit
-    if parent_commit_id is not None:
-        lines.append(f"parent {parent_commit_id}")
+    if parent_commit_ids is not None:
+        for parent_commit_id in parent_commit_ids:
+            lines.append(f"parent {parent_commit_id}")
     
     # Add author and committer information
     author = format_author(author_name, author_email)
@@ -108,7 +109,7 @@ def commit_changes(message, ignore_patterns, author_name="You", author_email="yo
     commit_id = create_commit_object(
         tree_object_id, 
         message, 
-        parent_commit_id, 
+        [parent_commit_id] if parent_commit_id != None else None, 
         author_name, 
         author_email
     )
@@ -118,7 +119,27 @@ def commit_changes(message, ignore_patterns, author_name="You", author_email="yo
     
     return "Commit created."
 
-
+def get_parent_commit_id(commit_id):
+    """
+    Get the parent commit ID of a given commit.
+    
+    Args:
+        commit_id: SHA-1 hash of the commit
+        
+    Returns:
+        Parent commit ID as string, or None if no parent (initial commit).
+    """
+    try:
+        data = GitObject.read_object(commit_id)
+        content = data.decode("utf-8")
+        parents = []
+        for line in content.split("\n"):
+            if line.startswith("parent "):
+                parents.append(line.split(" ")[1])
+        return parents
+    except Exception:
+        return None
+    
 # Legacy function names for backward compatibility
 def write_commit(tree_object_id, message, parent_commit_id=None, 
                 author_name="You", author_email="you@example.com"):

@@ -15,3 +15,4 @@ git_object.py
 visualize.py
 .venv
 commit_graph_images
+merge.py
