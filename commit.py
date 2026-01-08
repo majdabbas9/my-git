@@ -118,6 +118,12 @@ def commit_changes(message, ignore_patterns, author_name="You", author_email="yo
     update_branch_reference(commit_id, current_branch)
     
     return "Commit created."
+def write_commit_2_parents(merge_branch1,merge_branch2,parent_commit_id1,parent_commit_id2,author_name="You", author_email="you@example.com"):
+    tree_id = get_tree_from_commit(merge_branch1)
+    commit_id = create_commit_object(tree_id,f"merged {merge_branch1} and {merge_branch2}",[parent_commit_id1,parent_commit_id2],author_name,author_email)
+    update_branch_reference(commit_id,merge_branch1)
+    update_branch_reference(commit_id,merge_branch2)
+    return commit_id
 
 def get_parent_commit_id(commit_id):
     """

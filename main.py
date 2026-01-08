@@ -7,6 +7,7 @@ from tree import write_tree_from_directory, list_tree_contents
 from commit import commit_changes
 from help import find_repo_root, get_ignore_patterns, format_commit_log
 from branch import create_branch, checkout
+from merge import my_git_merge
 
 
 def cmd_init(args):
@@ -96,6 +97,11 @@ def cmd_log(args):
     print(format_commit_log())
 
 
+def cmd_merge(args):
+    """Merge a branch."""
+    print(my_git_merge(args.name))
+
+
 def main():
     """Main entry point for MyGit CLI."""
     parser = argparse.ArgumentParser(description="MyGit - A simple git implementation")
@@ -161,6 +167,11 @@ def main():
     # log command
     sp_log = subparsers.add_parser("log", help="Show commit history")
     sp_log.set_defaults(func=cmd_log)
+    
+    # merge command
+    sp_merge = subparsers.add_parser("merge", help="Merge a branch")
+    sp_merge.add_argument("name", help="The name of the branch to merge")
+    sp_merge.set_defaults(func=cmd_merge)
     
     args = parser.parse_args()
     args.func(args)

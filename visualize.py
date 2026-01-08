@@ -333,7 +333,7 @@ def main():
     graph.layout()
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = os.path.join("commit_graph_images", f"graph_{timestamp}.png")
+    output_path = os.path.join("commit_graph_images", f"a.png")
     
     graph.draw(output_path)
 
