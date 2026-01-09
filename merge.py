@@ -9,7 +9,7 @@ from commit import (
     get_commit_info,
     create_commit_object
 )
-from help import get_curr_branch
+from help import get_curr_branch,find_repo_root
 
 def find_commot_ancestor(commit_id1,commit_id2):
     all_commit_id_seen = set()
@@ -31,6 +31,7 @@ def find_commot_ancestor(commit_id1,commit_id2):
         for c in curr:
             if c in all_commit_id_seen:
                 return c
+        queue.extend(curr)
 
 def my_git_merge(branch):
     curr_branch = get_curr_branch()
@@ -68,7 +69,7 @@ def my_git_rebase(branch):
         
     # Collect commits to rebase
     commits_to_rebase = []
-    pointer = current_commit_id
+    pointer = target_commit_id
     while pointer != common_ancestor and pointer is not None:
         commits_to_rebase.append(pointer)
         parents = get_parent_commit_id(pointer)
@@ -80,7 +81,7 @@ def my_git_rebase(branch):
     commits_to_rebase.reverse()
     
     # Replay commits
-    new_parent = target_commit_id
+    new_parent = current_commit_id
     
     for commit_id in commits_to_rebase:
         info = get_commit_info(commit_id)
@@ -93,7 +94,11 @@ def my_git_rebase(branch):
                 info['author_email']
             )
             new_parent = new_commit_id
-            
+            path = os.path.join(find_repo_root(),".mygit","objects")
+            os.remove(os.path.join(path,info['tree_id'][:2],info['tree_id'][2:]))
+            os.remove(os.path.join(path,commit_id[:2],commit_id[2:])) 
     # Update branch ref
     update_branch_reference(new_parent, curr_branch)
+    update_branch_reference(new_parent,branch)
     return f"Successfully rebased {curr_branch} onto {branch}"
+
