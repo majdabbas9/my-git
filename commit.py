@@ -145,6 +145,60 @@ def get_parent_commit_id(commit_id):
         return parents
     except Exception:
         return None
+
+def get_commit_info(commit_id):
+    """
+    Get parsed information from a commit.
+    
+    Args:
+        commit_id: SHA-1 hash of the commit
+        
+    Returns:
+        Dictionary containing tree_id, parents, author, committer, and message
+    """
+    try:
+        data = GitObject.read_object(commit_id)
+        content = data.decode("utf-8")
+        info = {
+            'tree_id': None,
+            'parents': [],
+            'author': None,
+            'author_name': "You",
+            'author_email': "you@example.com",
+            'committer': None,
+            'message': []
+        }
+        
+        lines = content.split("\n")
+        is_message = False
+        
+        for line in lines:
+            if line == "" and not is_message:
+                is_message = True
+                continue
+            
+            if is_message:
+                info['message'].append(line)
+            elif line.startswith("tree "):
+                info['tree_id'] = line.split(" ")[1]
+            elif line.startswith("parent "):
+                info['parents'].append(line.split(" ")[1])
+            elif line.startswith("author "):
+                info['author'] = line[7:]
+                # Try to parse name and email
+                # Format: Name <email> timestamp timezone
+                import re
+                match = re.match(r"(.*) <(.*)> \d+ [+-]\d+", info['author'])
+                if match:
+                    info['author_name'] = match.group(1)
+                    info['author_email'] = match.group(2)
+            elif line.startswith("committer "):
+                info['committer'] = line[10:]
+                
+        info['message'] = "\n".join(info['message']).strip()
+        return info
+    except Exception:
+        return None
     
 # Legacy function names for backward compatibility
 def write_commit(tree_object_id, message, parent_commit_id=None, 

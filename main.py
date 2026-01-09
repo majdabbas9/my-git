@@ -7,7 +7,7 @@ from tree import write_tree_from_directory, list_tree_contents
 from commit import commit_changes
 from help import find_repo_root, get_ignore_patterns, format_commit_log
 from branch import create_branch, checkout
-from merge import my_git_merge
+from merge import my_git_merge, my_git_rebase
 
 
 def cmd_init(args):
@@ -102,6 +102,11 @@ def cmd_merge(args):
     print(my_git_merge(args.name))
 
 
+def cmd_rebase(args):
+    """Rebase the current branch onto another branch."""
+    print(my_git_rebase(args.name))
+
+
 def main():
     """Main entry point for MyGit CLI."""
     parser = argparse.ArgumentParser(description="MyGit - A simple git implementation")
@@ -172,6 +177,11 @@ def main():
     sp_merge = subparsers.add_parser("merge", help="Merge a branch")
     sp_merge.add_argument("name", help="The name of the branch to merge")
     sp_merge.set_defaults(func=cmd_merge)
+    
+    # rebase command
+    sp_rebase = subparsers.add_parser("rebase", help="Rebase the current branch onto another branch")
+    sp_rebase.add_argument("name", help="The name of the branch to rebase onto")
+    sp_rebase.set_defaults(func=cmd_rebase)
     
     args = parser.parse_args()
     args.func(args)
