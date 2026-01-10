@@ -220,4 +220,3 @@ def change_the_content_of_current_dict(commit_id, ignore_patterns=None):
 def my_git_check_out(target_ref, create_branch=False):
     """Legacy function - use checkout() instead."""
     return checkout(target_ref, create_branch)
-

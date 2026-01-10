@@ -69,7 +69,7 @@ def my_git_rebase(branch):
         
     # Collect commits to rebase
     commits_to_rebase = []
-    pointer = target_commit_id
+    pointer = current_commit_id
     while pointer != common_ancestor and pointer is not None:
         commits_to_rebase.append(pointer)
         parents = get_parent_commit_id(pointer)
@@ -81,7 +81,7 @@ def my_git_rebase(branch):
     commits_to_rebase.reverse()
     
     # Replay commits
-    new_parent = current_commit_id
+    new_parent = target_commit_id
     
     for commit_id in commits_to_rebase:
         info = get_commit_info(commit_id)
@@ -95,10 +95,7 @@ def my_git_rebase(branch):
             )
             new_parent = new_commit_id
             path = os.path.join(find_repo_root(),".mygit","objects")
-            os.remove(os.path.join(path,info['tree_id'][:2],info['tree_id'][2:]))
-            os.remove(os.path.join(path,commit_id[:2],commit_id[2:])) 
+            os.remove(os.path.join(path,commit_id[:2],commit_id[2:]))
     # Update branch ref
     update_branch_reference(new_parent, curr_branch)
-    update_branch_reference(new_parent,branch)
     return f"Successfully rebased {curr_branch} onto {branch}"
-
